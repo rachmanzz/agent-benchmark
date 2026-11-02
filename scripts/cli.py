@@ -3,10 +3,16 @@
 import argparse
 import json
 import sys
+from pathlib import Path
 from typing import Optional
 
+# Ensure package root is present in sys.path when invoked directly
+_pkg_root = str(Path(__file__).resolve().parent.parent)
+if _pkg_root not in sys.path:
+    sys.path.insert(0, _pkg_root)
+
 from scripts.runner import run_benchmark
-from scripts.writer import DEFAULT_HISTORY_FILE, read_records
+from scripts.writer import resolve_default_history_file, read_records
 
 
 def handle_run(args: argparse.Namespace) -> int:
@@ -29,16 +35,17 @@ def handle_run(args: argparse.Namespace) -> int:
     print(f"[Result] Start Time: {record.start_time}")
     print(f"[Result] End Time: {record.end_time}")
     print(f"[Result] Tokens: in={record.token_usage.input_tokens}, out={record.token_usage.output_tokens}, total={record.token_usage.total_tokens}")
-    print(f"[Result] Output appended to: {DEFAULT_HISTORY_FILE}")
+    print(f"[Result] Output appended to: {resolve_default_history_file()}")
 
     return 0 if record.status.value == "SUCCESS" else 1
 
 
 def handle_list(args: argparse.Namespace) -> int:
     """List recorded benchmark runs from the history file."""
-    records = read_records()
+    history_file = resolve_default_history_file()
+    records = read_records(history_file)
     if not records:
-        print(f"No records found in {DEFAULT_HISTORY_FILE}")
+        print(f"No records found in {history_file}")
         return 0
 
     if args.limit:
@@ -57,10 +64,11 @@ def handle_list(args: argparse.Namespace) -> int:
 
 def handle_show(args: argparse.Namespace) -> int:
     """Display full details and trajectory of a specific run."""
-    records = read_records()
+    history_file = resolve_default_history_file()
+    records = read_records(history_file)
     match = next((r for r in records if r.run_id == args.run_id), None)
     if not match:
-        print(f"Record with run_id '{args.run_id}' not found in {DEFAULT_HISTORY_FILE}", file=sys.stderr)
+        print(f"Record with run_id '{args.run_id}' not found in {history_file}", file=sys.stderr)
         return 1
 
     print(json.dumps(match.model_dump(), indent=2))

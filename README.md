@@ -19,6 +19,12 @@ A deterministic, zero-mock benchmark harness for evaluating AI coding agents (su
 python -m scripts.cli run --agent "codex" --prompt "Refactor user authentication service" --command "codex exec"
 ```
 
-### Skill Integration
+### Installation via Skills CLI
 
-The skill can be installed by linking or copying this repository into `.agents/skills/agent-benchmark/` or `~/.gemini/config/skills/agent-benchmark/`.
+Install directly into any agent-enabled project using the `skills` CLI:
+
+```bash
+npx skills add rachmanzz/agent-benchmark
+```
+
+Or install manually into `.agents/skills/agent-benchmark/` or `~/.gemini/config/skills/agent-benchmark/`.
