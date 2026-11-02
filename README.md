@@ -1,30 +1,45 @@
 # Agent Benchmark
 
-A deterministic, zero-mock benchmark harness for evaluating AI coding agents (such as Codex, Claude Code, OpenCode, and others).
+A deterministic, agent-centric benchmark skill for measuring AI coding agents (such as Codex, Claude Code, OpenCode, and Gemini) with exact process timing, token usage, and trajectory logging into `benchmark-historis.jsonl`.
 
-## Features
+## How It Works
 
-- **Process-Level Timing**: Tracks real start time (`start_time`), end time (`end_time`), and execution duration (`duration_seconds`) at the OS subprocess level.
-- **Deterministic Token Tracking**: Intercepts real token usage (`input_tokens`, `output_tokens`, `total_tokens`) from agent API requests or output streams without relying on agent compliance.
-- **Trajectory Capture**: Records timestamped execution steps, tool invocations, and output logs.
-- **Atomic JSONL Logging**: Persists benchmark records into `benchmark-historis.jsonl` located at the project root using file locks to prevent concurrency issues.
-- **Antigravity Skill Compatible**: Structured as an installable agent skill (`SKILL.md`) that can be mounted into any workspace or global agent environment.
+This repository is designed as an **Agent Skill**:
+1. You install the skill into your project using the `skills` CLI.
+2. The AI agent reads [`SKILL.md`](./SKILL.md) upon receiving a benchmark prompt from you.
+3. The agent autonomously follows the benchmark protocol:
+   - Starts a benchmark session via [`scripts/record.py`](./scripts/record.py).
+   - Solves the requested programming task.
+   - Finalizes the session, writing exact timestamps (`start_time`, `end_time`), elapsed `duration_seconds`, `token_usage`, and the `user_prompt` to `benchmark-historis.jsonl` at your project root.
 
-## Usage
+## Installation
 
-### Run from CLI
-
-```bash
-# Run benchmark against a target agent CLI command
-python -m scripts.cli run --agent "codex" --prompt "Refactor user authentication service" --command "codex exec"
-```
-
-### Installation via Skills CLI
-
-Install directly into any agent-enabled project using the `skills` CLI:
+Install directly into any agent-enabled project workspace:
 
 ```bash
 npx skills add rachmanzz/agent-benchmark
 ```
 
-Or install manually into `.agents/skills/agent-benchmark/` or `~/.gemini/config/skills/agent-benchmark/`.
+Or install manually by cloning or symlinking into:
+- Workspace scope: `.agents/skills/agent-benchmark/`
+- Global scope: `~/.gemini/config/skills/agent-benchmark/`
+
+## User Workflow
+
+Simply talk to your agent naturally in your workspace:
+
+> "Benchmark solving this issue: implement Dijkstra algorithm in Python with unit tests."
+
+The agent will read the skill instructions, execute the benchmark protocol, and save the verified entry to `benchmark-historis.jsonl`.
+
+## Inspecting History
+
+Inspect benchmark history at any time using the helper CLI:
+
+```bash
+# List all recorded benchmark runs
+python3 scripts/record.py list
+
+# Or run directly from python module
+python3 -m scripts.record list
+```

@@ -1,53 +1,63 @@
 ---
 name: agent-benchmark
 description: >-
-  Benchmark AI coding agents (such as Codex, Claude Code, and OpenCode) with deterministic process-level timing, token usage interception, and trajectory logging into benchmark-historis.jsonl.
+  Use this skill whenever the user asks to benchmark, evaluate, or track performance metrics (start/end timestamps, duration, token usage, user prompt) of executing any task into benchmark-historis.jsonl.
 ---
 
-# Agent Benchmark Skill
+# Agent Benchmark Protocol
 
-This skill provides an automated, deterministic benchmark harness for AI coding agents. It measures exact runtime duration, intercepts network token usage, captures real-time trajectories, and records results into `benchmark-historis.jsonl` at the project root.
+This skill instructs the agent on how to benchmark tasks and record execution metrics (start time, end time, duration, token usage, and user prompt) into `benchmark-historis.jsonl` located at the project root.
 
-## Capabilities
+## When to Use
 
-1. **Deterministic Process Timing**: Measures exact OS start and end timestamps (`start_time`, `end_time`) and total duration at the process boundary.
-2. **Transparent Token Interception**: Routes agent API traffic through an internal interceptor proxy to capture actual input and output tokens consumed.
-3. **Trajectory & Step Logging**: Captures each output line, tool invocation, and error with timestamps.
-4. **Root Project JSONL Storage**: Automatically appends each execution record to `benchmark-historis.jsonl`.
+Activate this skill whenever:
+- The user asks to benchmark a task (e.g. "benchmark this refactoring", "measure performance of solving this issue", "benchmark implementing X").
+- The user requests tracking execution duration, token metrics, or saving benchmark history.
 
-## How to Run
+## Execution Protocol
 
-Execute the benchmark CLI runner from the project root:
+Follow these 3 steps deterministically:
 
-```bash
-# General invocation
-python3 -m scripts.cli run --agent "<agent-name>" --prompt "<user-prompt>" [--command "<cli-command>"]
-
-# Benchmarking Codex
-python3 -m scripts.cli run --agent "codex" --prompt "Implement a binary search algorithm in python" --command "codex exec"
-
-# Benchmarking Claude Code
-python3 -m scripts.cli run --agent "claude" --prompt "Refactor error handling in server.py" --command "claude -p"
-
-# Benchmarking OpenCode
-python3 -m scripts.cli run --agent "opencode" --prompt "Write unit tests for authentication module" --command "opencode run --prompt"
-```
-
-## Viewing Benchmark History
+### Step 1: Start Benchmark Session
+Before beginning work on the user's task, initialize the benchmark session via the helper script to lock in the exact start timestamp and prompt:
 
 ```bash
-# List recent benchmark runs
-python3 -m scripts.cli list
+RUN_ID=$(python3 scripts/record.py start --agent "<your-agent-name>" --prompt "<exact user prompt>")
+```
+*(Replace `<your-agent-name>` with your identifier, e.g. `codex`, `claude`, `opencode`, `gemini`, etc.)*
 
-# Inspect full trajectory of a specific run
-python3 -m scripts.cli show <run_id>
+### Step 2: Perform the User's Requested Task
+Execute the requested coding, debugging, refactoring, or testing work as required by the user.
+
+### Step 3: Finalize and Persist Benchmark Record
+Immediately upon completing the task, finalize the benchmark session. Provide token counts (input/output) from your session context or tool metadata:
+
+```bash
+python3 scripts/record.py finish \
+  --run-id "$RUN_ID" \
+  --input-tokens <input_tokens_count> \
+  --output-tokens <output_tokens_count> \
+  --status "SUCCESS" \
+  --output "<brief summary of what was accomplished>"
+```
+*(If the task encountered an unrecoverable failure, pass `--status "FAILURE"`).*
+
+### Alternative: Direct Single-Command Logging
+If both start and end timestamps are already known from your runtime context, log directly in one command:
+
+```bash
+python3 scripts/record.py log \
+  --agent "<your-agent-name>" \
+  --prompt "<exact user prompt>" \
+  --start-time "<iso-8601-start-time>" \
+  --end-time "<iso-8601-end-time>" \
+  --input-tokens <input_tokens> \
+  --output-tokens <output_tokens> \
+  --status "SUCCESS" \
+  --output "<brief summary>"
 ```
 
-## File Structure
+## Storage Location
 
-- `SKILL.md`: Skill entry point and operational manual.
-- `scripts/schemas.py`: Pydantic data models for benchmark records, tokens, and trajectories.
-- `scripts/proxy.py`: Local HTTP token interceptor proxy.
-- `scripts/runner.py`: Execution harness and subprocess orchestrator.
-- `scripts/writer.py`: Thread-safe JSONL persistence into `benchmark-historis.jsonl`.
-- `scripts/cli.py`: Command-line interface.
+All records are written append-only to:
+`benchmark-historis.jsonl` at the root of the project workspace.
